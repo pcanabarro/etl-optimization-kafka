@@ -20,6 +20,13 @@
             <artifactId>kafka-clients</artifactId>
             <version>3.7.0</version>
         </dependency>
+
+        <!-- Postgresql database -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>42.7.2</version>
+        </dependency>
     </dependencies>
 
     <build>
