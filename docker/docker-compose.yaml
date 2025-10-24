@@ -29,7 +29,6 @@ services:
       - ./kafka-init:/kafka-init
     command: ["/bin/sh", "-c", "(/kafka-init/create-topics.sh) & /etc/confluent/docker/run"]
 
-
   kafka-connect:
     image: confluentinc/cp-kafka-connect:7.6.0
     container_name: kafka-connect
@@ -78,25 +77,27 @@ services:
     environment:
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: password
-      POSTGRES_DB: etl_db
+      POSTGRES_DB: destination_db
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
-      - ./init-sql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - ./db-init/pg-init.sql:/docker-entrypoint-initdb.d/pg-init.sql
 
-  pgadmin:
-    image: dpage/pgadmin4
-    container_name: pgadmin
+  mysql:
+    image: mysql:8
+    container_name: mysql
     restart: always
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@admin.com
-      PGADMIN_DEFAULT_USER: admin
-      PGADMIN_DEFAULT_PASSWORD: password
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: source_db
+      MYSQL_USER: admin
+      MYSQL_PASSWORD: password
     ports:
-      - "5050:80"
-    depends_on:
-      - postgres
-
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./db-init/mysql-init.sql:/docker-entrypoint-initdb.d/mysql-init.sql
 volumes:
   pgdata:
+  mysql-data:
