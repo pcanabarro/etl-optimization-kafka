@@ -1,6 +1,7 @@
 package com.pcanabarro.controllers;
 
-import com.pcanabarro.ProducerService;
+import com.pcanabarro.services.ProducerService;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -14,7 +15,13 @@ public class ProducerController {
 
     @GetMapping("/send")
     public String send() {
-        producerService.sendMessages();
-        return "Messages sent!";
+        try {
+            int messagesSent = producerService.sendMessages();
+
+            return ResponseEntity.ok(messagesSent + " messages sent!").toString();
+        } catch (Exception e) {
+            return e.getMessage();
+        }
+
     }
 }

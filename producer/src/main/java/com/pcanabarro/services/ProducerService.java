@@ -1,42 +1,35 @@
-package com.pcanabarro;
+package com.pcanabarro.services;
 
-import org.apache.kafka.clients.producer.KafkaProducer;
-import org.apache.kafka.clients.producer.ProducerRecord;
-import com.pcanabarro.database.Database;
+import com.pcanabarro.entities.Employee;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.sql.*;
-import java.util.Properties;
+import java.util.List;
 
 @Service
 public class ProducerService {
-    public void sendMessages() {
-        Properties props = new Properties();
-        props.put("bootstrap.servers", "localhost:29092");
-        props.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
-        props.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
+    private final DatabaseService databaseService;
+    private final KafkaService kafkaService;
 
-        try (
-                KafkaProducer<String, String> producer = new KafkaProducer<>(props);
-                Connection conn = Database.getConnection();
-                Statement stmt = conn.createStatement();
-                ResultSet rs = stmt.executeQuery("SELECT * FROM employee");
-        ) {
-            ResultSetMetaData meta = rs.getMetaData();
-            int columnCount = meta.getColumnCount();
+    @Autowired
+    public ProducerService(DatabaseService databaseService, KafkaService kafkaService) {
+        this.databaseService = databaseService;
+        this.kafkaService = kafkaService;
+    }
+
+    public int sendMessages() {
+        try {
+            List<Employee> records = databaseService.fetchEmployeeRecords();
             int i = 1;
-            while (rs.next()) {
-                StringBuilder message = new StringBuilder();
-                for (int col = 1; col <= columnCount; col++) {
-                    message.append(meta.getColumnName(col)).append(": ").append(rs.getString(col));
-                    if (col < columnCount) message.append(", ");
-                }
-                producer.send(new ProducerRecord<>("etl_topic", Integer.toString(i), message.toString()));
-                System.out.println("Enviado: " + message);
+            for (Employee record : records) {
+                kafkaService.sendMessage("etl_topic", Integer.toString(i), record.toString());
+                System.out.println("Enviado: " + record);
                 i++;
             }
+            return records.size();
         } catch (Exception e) {
             e.printStackTrace();
+            return -1;
         }
     }
 }
