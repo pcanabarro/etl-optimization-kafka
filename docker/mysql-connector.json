@@ -1,0 +1,20 @@
+{
+  "name": "mysql-source-connector",
+  "config": {
+    "connector.class": "io.debezium.connector.mysql.MySqlConnector",
+    "tasks.max": "1",
+    "database.hostname": "mysql",
+    "database.port": "3306",
+    "database.user": "admin",
+    "database.password": "password",
+    "database.server.id": "223344",
+    "database.server.name": "source_db",
+    "database.include.list": "source_db",
+    "table.include.list": "source_db.job_position,source_db.employee,source_db.salary",
+    "database.history.kafka.bootstrap.servers": "kafka-broker:9092",
+    "database.history.kafka.topic": "dbhistory_source_db",
+    "include.schema.changes": "true",
+    "topic.prefix": "etl_",
+    "name": "mysql-source-connector"
+  }
+}

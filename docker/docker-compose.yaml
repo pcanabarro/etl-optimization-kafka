@@ -12,6 +12,7 @@ services:
 
   kafka-broker:
     image: confluentinc/cp-kafka:7.6.0
+    restart: always
     container_name: kafka-broker
     ports:
       - "9092:9092"
@@ -30,32 +31,31 @@ services:
     command: ["/bin/sh", "-c", "(/kafka-init/create-topics.sh) & /etc/confluent/docker/run"]
 
   kafka-connect:
-    image: confluentinc/cp-kafka-connect:7.6.0
+    image: quay.io/debezium/connect:3.1.1.Final
+    platform: linux/arm64
     container_name: kafka-connect
     ports:
       - "8083:8083"
     environment:
-      CONNECT_BOOTSTRAP_SERVERS: kafka-broker:9092
-      CONNECT_REST_PORT: 8083
-      CONNECT_GROUP_ID: kafka-connect-group
-      CONNECT_CONFIG_STORAGE_TOPIC: "connect-configs"
-      CONNECT_OFFSET_STORAGE_TOPIC: "connect-offsets"
-      CONNECT_STATUS_STORAGE_TOPIC: "connect-status"
-      CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: 1
-      CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: 1
-      CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: 1
-      CONNECT_KEY_CONVERTER: org.apache.kafka.connect.json.JsonConverter
-      CONNECT_VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter
-      CONNECT_KEY_CONVERTER_SCHEMAS_ENABLE: "false"
-      CONNECT_VALUE_CONVERTER_SCHEMAS_ENABLE: "false"
-      CONNECT_INTERNAL_KEY_CONVERTER: org.apache.kafka.connect.json.JsonConverter
-      CONNECT_INTERNAL_VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter
-      CONNECT_REST_ADVERTISED_HOST_NAME: kafka-connect
-      CONNECT_PLUGIN_PATH: /usr/share/java,/etc/kafka-connect/jars
+      BOOTSTRAP_SERVERS: kafka-broker:9092
+      GROUP_ID: kafka-connect-group
+      CONFIG_STORAGE_TOPIC: "connect-configs"
+      OFFSET_STORAGE_TOPIC: "connect-offsets"
+      STATUS_STORAGE_TOPIC: "connect-status"
+      CONFIG_STORAGE_REPLICATION_FACTOR: 1
+      OFFSET_STORAGE_REPLICATION_FACTOR: 1
+      STATUS_STORAGE_REPLICATION_FACTOR: 1
+      KEY_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      KEY_CONVERTER_SCHEMAS_ENABLE: "false"
+      VALUE_CONVERTER_SCHEMAS_ENABLE: "false"
+      REST_ADVERTISED_HOST_NAME: kafka-connect
+      PLUGIN_PATH: /usr/share/java,/etc/kafka-connect/jars
     volumes:
       - ./connect-plugins:/etc/kafka-connect/jars
     depends_on:
       - kafka-broker
+      - mysql
       - postgres
 
   kafka-ui-page:
@@ -95,9 +95,17 @@ services:
       MYSQL_PASSWORD: password
     ports:
       - "3306:3306"
+    command:
+      - --server-id=223344
+      - --log-bin=mysql-bin
+      - --binlog_format=ROW
+      - --binlog_row_image=FULL
+      - --gtid_mode=ON
+      - --enforce_gtid_consistency=ON
     volumes:
       - mysql-data:/var/lib/mysql
       - ./db-init/mysql-init.sql:/docker-entrypoint-initdb.d/mysql-init.sql
+
 volumes:
   pgdata:
   mysql-data:

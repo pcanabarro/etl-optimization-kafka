@@ -1,8 +1,6 @@
 #!/bin/bash
-# Aguarda o Kafka ficar pronto
 sleep 10
 
-# Cria o tópico etl_topic com 3 partições e fator de replicação 1
 kafka-topics --create \
   --topic etl_topic \
   --bootstrap-server kafka-broker:9092 \
@@ -10,5 +8,12 @@ kafka-topics --create \
   --replication-factor 1 \
   --if-not-exists
 
-# Apenas para debug
+kafka-topics --create \
+  --topic dbhistory_source_db \
+  --bootstrap-server kafka-broker:9092 \
+  --partitions 1 \
+  --replication-factor 1 \
+  --if-not-exists
+
 echo "✅ Tópico 'etl_topic' criado (3 partitions, RF=1)"
+echo "✅ Tópico 'dbhistory_source_db' criado (1 partition, RF=1)"
