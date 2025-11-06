@@ -8,9 +8,9 @@
     "database.user": "root",
     "database.password": "rootpassword",
     "database.server.id": "1",
-    "database.server.name": "mysql-server",
-    "database.include.list": "cdc_db",
+    "database.server.name": "mysql",
+    "database.include.list": "source_db",
     "database.history.kafka.bootstrap.servers": "kafka:9092",
-    "database.history.kafka.topic": "dbhistory.cdc_db"
+    "database.history.kafka.topic": "dbz_history.mysql"
   }
 }

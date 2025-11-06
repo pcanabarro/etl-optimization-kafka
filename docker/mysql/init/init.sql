@@ -1,3 +1,4 @@
+use source_db;
 CREATE TABLE job_position (
                               id INT AUTO_INCREMENT PRIMARY KEY,
                               title VARCHAR(100) NOT NULL,

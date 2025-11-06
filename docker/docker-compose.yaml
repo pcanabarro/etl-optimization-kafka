@@ -35,12 +35,12 @@ services:
       - "3306:3306"
     environment:
       MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: cdc_db
+      MYSQL_DATABASE: source_db
       MYSQL_USER: user
       MYSQL_PASSWORD: password
     volumes:
       - ./mysql/my.cnf:/etc/mysql/my.cnf
-      - ./mysql/init.sql:/docker-entrypoint-initdb.d
+      - ./mysql/init:/docker-entrypoint-initdb.d
 
   connect:
     image: debezium/connect:1.9
@@ -53,9 +53,9 @@ services:
     environment:
       BOOTSTRAP_SERVERS: kafka:9092
       GROUP_ID: 1
-      CONFIG_STORAGE_TOPIC: my_connect_configs
-      OFFSET_STORAGE_TOPIC: my_connect_offsets
-      STATUS_STORAGE_TOPIC: my_connect_statuses
+      CONFIG_STORAGE_TOPIC: dbz_configs
+      OFFSET_STORAGE_TOPIC: dbz_offsets
+      STATUS_STORAGE_TOPIC: dbz_statuses
       # curl -X POST http://localhost:8083/connectors -H "Content-Type: application/json" -d @debezium-connector.json
 
   kafka-ui:
@@ -69,6 +69,7 @@ services:
       DYNAMIC_CONFIG_ENABLED: 'true'
     depends_on:
       - kafka
+      - connect
 
   postgres:
     image: postgres:15
@@ -85,6 +86,5 @@ services:
       - ./pg/init.sql:/docker-entrypoint-initdb.d/init.sql
 
 volumes:
-  kafka-data:
   pgdata:
 
