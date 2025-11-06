@@ -24,7 +24,7 @@ public class Consumer {
         props.put("value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
 
         try (KafkaConsumer<String, String> consumer = new KafkaConsumer<>(props)) {
-            consumer.subscribe(Collections.singletonList("etl_topic"));
+            consumer.subscribe(Collections.singletonList("mysql.source_db.job_position"));
 
             System.out.println("Esperando mensagens...");
 
