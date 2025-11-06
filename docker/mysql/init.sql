@@ -1,7 +1,3 @@
-CREATE DATABASE IF NOT EXISTS source_db;
-
-USE source_db;
-
 CREATE TABLE job_position (
                               id INT AUTO_INCREMENT PRIMARY KEY,
                               title VARCHAR(100) NOT NULL,
@@ -26,6 +22,5 @@ CREATE TABLE salary (
                         FOREIGN KEY (employee_id) REFERENCES employee(id)
 );
 
-CREATE USER IF NOT EXISTS 'debezium'@'%' IDENTIFIED BY 'dbz';
-GRANT SELECT, RELOAD, SHOW DATABASES, REPLICATION SLAVE, REPLICATION CLIENT ON *.* TO 'debezium'@'%';
+ALTER USER 'root'@'%' IDENTIFIED WITH mysql_native_password BY 'rootpassword';
 FLUSH PRIVILEGES;

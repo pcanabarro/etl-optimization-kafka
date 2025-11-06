@@ -1,74 +1,73 @@
 version: '3.8'
 
 services:
-  zookeeper-node:
-    image: confluentinc/cp-zookeeper:7.6.0
-    container_name: zookeeper-node
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.0.1
+    container_name: zookeeper
     ports:
       - "2181:2181"
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
 
-  kafka-broker:
-    image: confluentinc/cp-kafka:7.6.0
-    restart: always
-    container_name: kafka-broker
+  kafka:
+    image: confluentinc/cp-kafka:7.0.1
+    container_name: kafka
     ports:
       - "9092:9092"
-      - "29092:29092"
+    depends_on:
+      - zookeeper
     environment:
       KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper-node:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-broker:9092,PLAINTEXT_HOST://localhost:29092
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-    depends_on:
-      - zookeeper-node
-    volumes:
-      - ./kafka-init:/kafka-init
-    command: ["/bin/sh", "-c", "(/kafka-init/create-topics.sh) & /etc/confluent/docker/run"]
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_CONFLUENT_LICENSE_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_CONFLUENT_BALANCER_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
 
-  kafka-connect:
-    image: quay.io/debezium/connect:3.1.1.Final
-    platform: linux/arm64
-    container_name: kafka-connect
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: cdc_db
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+    volumes:
+      - ./mysql/my.cnf:/etc/mysql/my.cnf
+      - ./mysql/init.sql:/docker-entrypoint-initdb.d
+
+  connect:
+    image: debezium/connect:1.9
+    container_name: connect
     ports:
       - "8083:8083"
-    environment:
-      BOOTSTRAP_SERVERS: kafka-broker:9092
-      GROUP_ID: kafka-connect-group
-      CONFIG_STORAGE_TOPIC: "connect-configs"
-      OFFSET_STORAGE_TOPIC: "connect-offsets"
-      STATUS_STORAGE_TOPIC: "connect-status"
-      CONFIG_STORAGE_REPLICATION_FACTOR: 1
-      OFFSET_STORAGE_REPLICATION_FACTOR: 1
-      STATUS_STORAGE_REPLICATION_FACTOR: 1
-      KEY_CONVERTER: org.apache.kafka.connect.json.JsonConverter
-      VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter
-      KEY_CONVERTER_SCHEMAS_ENABLE: "false"
-      VALUE_CONVERTER_SCHEMAS_ENABLE: "false"
-      REST_ADVERTISED_HOST_NAME: kafka-connect
-      PLUGIN_PATH: /usr/share/java,/etc/kafka-connect/jars
-    volumes:
-      - ./connect-plugins:/etc/kafka-connect/jars
     depends_on:
-      - kafka-broker
+      - kafka
       - mysql
-      - postgres
+    environment:
+      BOOTSTRAP_SERVERS: kafka:9092
+      GROUP_ID: 1
+      CONFIG_STORAGE_TOPIC: my_connect_configs
+      OFFSET_STORAGE_TOPIC: my_connect_offsets
+      STATUS_STORAGE_TOPIC: my_connect_statuses
 
-  kafka-ui-page:
-    container_name: kafka-ui-page
+  kafka-ui:
+    container_name: kafka-ui
     image: provectuslabs/kafka-ui:latest
     ports:
       - "8085:8080"
     environment:
       KAFKA_CLUSTERS_0_NAME: local
-      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka-broker:9092
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
       DYNAMIC_CONFIG_ENABLED: 'true'
     depends_on:
-      - kafka-broker
+      - kafka
 
   postgres:
     image: postgres:15
@@ -77,35 +76,14 @@ services:
     environment:
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: password
-      POSTGRES_DB: destination_db
+      POSTGRES_DB: destination
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
-      - ./db-init/pg-init.sql:/docker-entrypoint-initdb.d/pg-init.sql
-
-  mysql:
-    image: mysql:8
-    container_name: mysql
-    restart: always
-    environment:
-      MYSQL_ROOT_PASSWORD: password
-      MYSQL_DATABASE: source_db
-      MYSQL_USER: admin
-      MYSQL_PASSWORD: password
-    ports:
-      - "3306:3306"
-    command:
-      - --server-id=223344
-      - --log-bin=mysql-bin
-      - --binlog_format=ROW
-      - --binlog_row_image=FULL
-      - --gtid_mode=ON
-      - --enforce_gtid_consistency=ON
-    volumes:
-      - mysql-data:/var/lib/mysql
-      - ./db-init/mysql-init.sql:/docker-entrypoint-initdb.d/mysql-init.sql
+      - ./pg/init.sql:/docker-entrypoint-initdb.d/init.sql
 
 volumes:
+  kafka-data:
   pgdata:
-  mysql-data:
+
