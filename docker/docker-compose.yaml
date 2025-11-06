@@ -56,6 +56,7 @@ services:
       CONFIG_STORAGE_TOPIC: my_connect_configs
       OFFSET_STORAGE_TOPIC: my_connect_offsets
       STATUS_STORAGE_TOPIC: my_connect_statuses
+      # curl -X POST http://localhost:8083/connectors -H "Content-Type: application/json" -d @debezium-connector.json
 
   kafka-ui:
     container_name: kafka-ui
