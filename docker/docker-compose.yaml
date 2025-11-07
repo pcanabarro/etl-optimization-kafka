@@ -45,8 +45,8 @@ services:
       - ./mysql/init:/docker-entrypoint-initdb.d
 
   connect:
-    image: debezium/connect:2.7.0.Final #image: debezium/connect:1.9
-    platform: linux/amd64  # remove if windows
+    image: debezium/connect:2.7.0.Final
+    platform: linux/amd64
     container_name: connect
     ports:
       - "8083:8083"
