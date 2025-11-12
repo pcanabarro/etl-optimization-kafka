@@ -7,7 +7,6 @@ import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 
 import java.sql.Connection;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.Duration;
@@ -31,10 +30,25 @@ public class Consumer {
             while (true) {
                 ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(500));
                 for (ConsumerRecord<String, String> record : records) {
-                    System.out.printf("Consumido [key=%s, value=%s, offset=%d]\n",
-                            record.key(), record.value(), record.offset());
+//                    insertMessageIntoDatabase(record);
+                    System.out.printf("Consumido [key=%s, partition=%s, value=%s, offset=%d]\n",
+                            record.key(), record.partition(), record.value(), record.offset());
                 }
             }
+        }
+    }
+    private static void insertMessageIntoDatabase(ConsumerRecord<String, String> record) {
+        try (Connection conn = Database.getConnection();
+             Statement stmt = conn.createStatement()) {
+            String sql = String.format(
+                    "INSERT INTO messages (message_key, message_value, message_offset) VALUES ('%s', '%s', %d)",
+                    record.key(), record.value(), record.offset()
+            );
+            stmt.executeUpdate(sql);
+            System.out.printf("Inserted into DB: [key=%s, value=%s, offset=%d]\n",
+                    record.key(), record.value(), record.offset());
+        } catch (SQLException e) {
+            System.err.println("DB insert error: " + e.getMessage());
         }
     }
 }
