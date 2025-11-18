@@ -4,6 +4,7 @@ services:
   zookeeper:
     image: confluentinc/cp-zookeeper:7.0.1
     container_name: zookeeper
+    profiles: [ "server", "all" ]
     ports:
       - "2181:2181"
     environment:
@@ -13,6 +14,7 @@ services:
   kafka:
     image: confluentinc/cp-kafka:7.0.1
     container_name: kafka
+    profiles: [ "server", "all" ]
     ports:
       - "9092:9092"
       - "29092:29092"
@@ -33,6 +35,7 @@ services:
   mysql:
     image: mysql:8.0
     container_name: mysql
+    profiles: [ "server", "all" ]
     ports:
       - "3306:3306"
     environment:
@@ -48,6 +51,7 @@ services:
     image: debezium/connect:2.7.0.Final
     platform: linux/amd64
     container_name: connect
+    profiles: [ "client", "all" ]
     ports:
       - "8083:8083"
     depends_on:
@@ -62,8 +66,9 @@ services:
       # curl -X POST http://localhost:8083/connectors -H "Content-Type: application/json" -d @debezium-connector.json
 
   kafka-ui:
-    container_name: kafka-ui
     image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    profiles: [ "client", "all" ]
     ports:
       - "8085:8080"
     environment:
@@ -77,6 +82,7 @@ services:
   postgres:
     image: postgres:15
     container_name: postgres
+    profiles: [ "server", "all" ]
     restart: always
     environment:
       POSTGRES_USER: admin
