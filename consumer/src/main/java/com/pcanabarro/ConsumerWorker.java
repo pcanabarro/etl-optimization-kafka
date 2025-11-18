@@ -5,7 +5,9 @@ import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.common.serialization.StringDeserializer;
 
+import java.io.InputStream;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -23,15 +25,24 @@ class ConsumerWorker implements Runnable {
     @Override
     public void run() {
         Properties props = new Properties();
-        props.put("bootstrap.servers", "localhost:29092");
-        props.put("group.id", "etl-group");
-        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-        props.put("key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
-        props.put("value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
-        props.put("client.id", consumerName);
+        try (InputStream input = Database.class.getClassLoader().getResourceAsStream("config.properties")) {
+            if (input == null) {
+                System.out.println("Sorry, unable to find config.properties");
+            }
+            props.load(input);
+            props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, props.get("kafka.bootstrap.servers"));
+            props.put(ConsumerConfig.GROUP_ID_CONFIG, props.get("kafka.group.id"));
+            props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG,  props.get("kafka.auto.offset.reset"));
+            props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+            props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+            props.put("client.id", consumerName);
+        } catch (Exception e) {
+            System.out.println("unable to load config.properties");
+            e.printStackTrace();
+        }
 
         try (KafkaConsumer<String, String> consumer = new KafkaConsumer<>(props)) {
-            consumer.subscribe(Collections.singletonList("etl-topic"));
+            consumer.subscribe(Collections.singletonList(props.getProperty("kafka.topic")));
             System.out.println(consumerName + " esperando mensagens...");
 
             while (true) {
