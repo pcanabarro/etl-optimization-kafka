@@ -5,6 +5,7 @@ services:
     image: confluentinc/cp-zookeeper:7.0.1
     container_name: zookeeper
     profiles: [ "server", "all" ]
+    restart: on-failure
     ports:
       - "2181:2181"
     environment:
@@ -15,6 +16,7 @@ services:
     image: confluentinc/cp-kafka:7.0.1
     container_name: kafka
     profiles: [ "server", "all" ]
+    restart: on-failure
     ports:
       - "9092:9092"
       - "29092:29092"
@@ -36,6 +38,7 @@ services:
     image: mysql:8.0
     container_name: mysql
     profiles: [ "server", "all" ]
+    restart: on-failure
     ports:
       - "3306:3306"
     environment:
@@ -75,15 +78,12 @@ services:
       KAFKA_CLUSTERS_0_NAME: local
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
       DYNAMIC_CONFIG_ENABLED: 'true'
-    depends_on:
-      - kafka
-      - connect
 
   postgres:
     image: postgres:15
     container_name: postgres
     profiles: [ "server", "all" ]
-    restart: always
+    restart: on-failure
     environment:
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: password

@@ -5,7 +5,7 @@ This repository contains the final paper for Computer Science undergraduate prog
 Consumer:
 
 Docker:
-- Server ports: 3306 (mysql), 9092 (kafka), 5432 (postgres)
+- Server ports: 3306 (mysql), 29092 (kafka), 5432 (postgres)
 - Client ports: 8083 (debezium), 8085 (kafka ui)
 
 Producer:
