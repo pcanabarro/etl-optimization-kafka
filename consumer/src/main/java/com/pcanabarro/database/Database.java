@@ -3,6 +3,7 @@ package com.pcanabarro.database;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.Properties;
 import java.io.InputStream;
 import java.io.IOException;
@@ -36,5 +37,17 @@ public class Database {
 
     public static Connection getConnection() {
         return connection;
+    }
+
+    public static void executePostgresStatement(String sql) {
+        if (sql == null || sql.isEmpty()) {
+            System.err.println("SQL statement is null or empty.");
+            return;
+        }
+        try (Statement stmt = connection.createStatement()) {
+            stmt.execute(sql);
+        } catch (SQLException e) {
+            System.err.println("Error executing SQL: " + e.getMessage());
+        }
     }
 }
