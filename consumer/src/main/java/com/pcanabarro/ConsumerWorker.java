@@ -10,13 +10,20 @@ import org.apache.kafka.common.serialization.StringDeserializer;
 import org.json.JSONObject;
 import java.io.InputStream;
 import java.time.Duration;
+import java.time.LocalDate;
 import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 
 import static com.pcanabarro.database.Database.executePostgresStatement;
 
 class ConsumerWorker implements Runnable {
     private final String consumerName;
+    private static final Map<String, List<String>> DATE_FIELDS = Map.of(
+            "salary", List.of("effective_from"),
+            "employee", List.of("hired_at")
+    );
 
     public ConsumerWorker(String consumerName) {
         this.consumerName = consumerName;
@@ -52,25 +59,25 @@ class ConsumerWorker implements Runnable {
                 ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(500));
                 for (ConsumerRecord<String, String> record : records) {
                     long startTime = System.nanoTime();
-                    System.out.printf("%s consumido [key=%s, partition=%s, value=%s, offset=%d]\n",
-                            consumerName, record.key(), record.partition(), record.value(), record.offset());
+//                    System.out.printf("%s consumido [key=%s, partition=%s, value=%s, offset=%d]\n",
+//                            consumerName, record.key(), record.partition(), record.value(), record.offset());
 
                     String sqlStatement = transformMessageForPostgres(record);
                     long transformTime = System.nanoTime() - startTime;
-                    System.out.printf("Transform Time: %d ms", transformTime);
+//                    System.out.printf("Transform Time: %d ns\n", transformTime);
 
                     executePostgresStatement(sqlStatement);
 
                     long endTime = System.nanoTime();
-                    long durationMs = (endTime - startTime) / 1_000_000;
-                    System.out.printf("Processing time: %d ms\n", durationMs);
-                    System.out.println(" ");
+                    long durationMs = endTime - startTime;
+//                    System.out.printf("Processing time: %d ns\n", durationMs);
+//                    System.out.println(" ");
 
                     messageCount++;
                     if (messageCount % 10_000 == 0) {
                         long batchEndTime = System.nanoTime();
                         long batchDurationMs = (batchEndTime - batchStartTime) / 1_000_000;
-                        System.out.printf("Processed 10,000 messages in %d ms\n", batchDurationMs);
+                        System.out.printf("%s - Processed 10,000 messages in %d ms\n", this.consumerName, batchDurationMs);
                         batchStartTime = System.nanoTime();
                     }
                 }
@@ -91,6 +98,8 @@ class ConsumerWorker implements Runnable {
             JSONObject source = json.getJSONObject("source");
             String table = source.getString("table");
             String op = json.getString("op");
+
+            validateAndTransformAfter(after, table);
 
             return switch (op) {
                 case "c" -> insertMessageToPostgres(after, table);
@@ -119,9 +128,9 @@ class ConsumerWorker implements Runnable {
                 int salaryId = after.getInt("id");
                 int employeeId = after.getInt("employee_id");
                 String amount = after.getString("amount");
-                int effectiveFrom = after.getInt("effective_from");
+                String effectiveFrom = after.getString("effective_from");
                 return String.format(
-                        "INSERT INTO salary (id, employee_id, amount, effective_from) VALUES (%d, %d, '%s', %d)",
+                        "INSERT INTO salary (id, employee_id, amount, effective_from) VALUES (%d, %d, '%s', '%s')",
                         salaryId, employeeId, amount, effectiveFrom
                 );
             case "employee":
@@ -129,9 +138,9 @@ class ConsumerWorker implements Runnable {
                 String name = after.getString("name");
                 String email = after.getString("email");
                 int jobPositionId = after.getInt("job_position_id");
-                int hiredAt = after.getInt("hired_at");
+                String hiredAt = after.getString("hired_at");
                 return String.format(
-                        "INSERT INTO employee (id, name, email, job_position_id, hired_at) VALUES (%d, '%s', '%s', %d, %d)",
+                        "INSERT INTO employee (id, name, email, job_position_id, hired_at) VALUES (%d, '%s', '%s', %d, '%s')",
                         empId, name.replace("'", "''"), email.replace("'", "''"), jobPositionId, hiredAt
                 );
             default:
@@ -155,9 +164,9 @@ class ConsumerWorker implements Runnable {
                 int salaryId = after.getInt("id");
                 int employeeId = after.getInt("employee_id");
                 String amount = after.getString("amount");
-                int effectiveFrom = after.getInt("effective_from");
+                String effectiveFrom = after.getString("effective_from");
                 return String.format(
-                        "UPDATE salary SET employee_id=%d, amount='%s', effective_from=%d WHERE id=%d",
+                        "UPDATE salary SET employee_id=%d, amount='%s', effective_from='%s' WHERE id=%d",
                         employeeId, amount, effectiveFrom, salaryId
                 );
             case "employee":
@@ -165,9 +174,9 @@ class ConsumerWorker implements Runnable {
                 String name = after.getString("name");
                 String email = after.getString("email");
                 int jobPositionId = after.getInt("job_position_id");
-                int hiredAt = after.getInt("hired_at");
+                String hiredAt = after.getString("hired_at");
                 return String.format(
-                        "UPDATE employee SET name='%s', email='%s', job_position_id=%d, hired_at=%d WHERE id=%d",
+                        "UPDATE employee SET name='%s', email='%s', job_position_id=%d, hired_at='%s' WHERE id=%d",
                         name.replace("'", "''"), email.replace("'", "''"), jobPositionId, hiredAt, empId
                 );
             default:
@@ -179,5 +188,27 @@ class ConsumerWorker implements Runnable {
     private static String deleteMessageToPostgres(JSONObject after, String table) {
         int id = after.getInt("id");
         return String.format("DELETE FROM %s WHERE id=%d", table, id);
-}
+    }
+
+    private static void validateAndTransformAfter(JSONObject after, String table) {
+        if (after == null || table == null) return;
+
+        List<String> fieldsToConvert = DATE_FIELDS.get(table);
+        if (fieldsToConvert == null) return;
+
+        for (String field : fieldsToConvert) {
+            if (!after.has(field)) continue;
+
+            Object value = after.get(field);
+
+            if (value instanceof Number) {
+                int days = ((Number) value).intValue();
+                LocalDate convertedDate = LocalDate.ofEpochDay(days);
+                after.put(field, convertedDate.toString());
+            }
+            else if (value instanceof String) {
+                return;
+            }
+        }
+    }
 }

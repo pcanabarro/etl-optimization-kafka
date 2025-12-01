@@ -46,6 +46,7 @@ public class Database {
         }
         try (Statement stmt = connection.createStatement()) {
             stmt.execute(sql);
+//            System.out.println("Executed: " + sql);
         } catch (SQLException e) {
             System.err.println("Error executing SQL: " + e.getMessage());
         }
