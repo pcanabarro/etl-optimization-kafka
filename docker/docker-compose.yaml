@@ -94,8 +94,8 @@ services:
     profiles: [ "server", "all" ]
     restart: on-failure
     environment:
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: password
+      POSTGRES_USER: app_admin
+      POSTGRES_PASSWORD: Root@Passord123
       POSTGRES_DB: destination_db
     ports:
       - "5432:5432"

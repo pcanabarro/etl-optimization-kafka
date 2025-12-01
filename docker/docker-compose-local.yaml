@@ -75,9 +75,6 @@ services:
       CONFIG_STORAGE_TOPIC: dbz_configs
       OFFSET_STORAGE_TOPIC: dbz_offsets
       STATUS_STORAGE_TOPIC: dbz_statuses
-    depends_on:
-        - kafka
-        - mysql
       # curl -X POST http://localhost:8083/connectors -H "Content-Type: application/json" -d @debezium-connector-local.json
 
   kafka-ui:
@@ -97,8 +94,8 @@ services:
     profiles: [ "server", "all" ]
     restart: on-failure
     environment:
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: password
+      POSTGRES_USER: app_admin
+      POSTGRES_PASSWORD: Root@Passord123
       POSTGRES_DB: destination_db
     ports:
       - "5432:5432"

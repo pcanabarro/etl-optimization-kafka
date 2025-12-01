@@ -1,5 +1,5 @@
 {
-  "name": "mysql-connector",
+  "name": "mysql-connector-local",
   "config": {
     "connector.class": "io.debezium.connector.mysql.MySqlConnector",
     "tasks.max": "1",

@@ -3,22 +3,19 @@ package com.pcanabarro.controllers;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 public class ProducerController {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
-    @PostMapping("/produce")
-    public String produceCreateMessages() {
+    @PostMapping("/produce/{value}")
+    public String produceCreateMessages(@PathVariable("value") int value) {
         try {
-            jdbcTemplate.execute("CALL populate_job_positions();");
-            jdbcTemplate.execute("CALL populate_employees();");
-            jdbcTemplate.execute("CALL populate_salaries();");
+            jdbcTemplate.update("CALL populate_job_positions(?);", value);
+            jdbcTemplate.update("CALL populate_employees(?);", value);
+            jdbcTemplate.update("CALL populate_salaries(?);", value);
 
             return ResponseEntity.ok( "Create Messages created!").toString();
         } catch (Exception e) {

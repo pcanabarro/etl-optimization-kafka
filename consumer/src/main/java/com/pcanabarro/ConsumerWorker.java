@@ -45,6 +45,9 @@ class ConsumerWorker implements Runnable {
             consumer.subscribe(Collections.singletonList(props.getProperty("kafka.topic")));
             System.out.println(consumerName + " esperando mensagens...");
 
+            long batchStartTime = System.nanoTime();
+            int messageCount = 0;
+
             while (true) {
                 ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(500));
                 for (ConsumerRecord<String, String> record : records) {
@@ -62,6 +65,14 @@ class ConsumerWorker implements Runnable {
                     long durationMs = (endTime - startTime) / 1_000_000;
                     System.out.printf("Processing time: %d ms\n", durationMs);
                     System.out.println(" ");
+
+                    messageCount++;
+                    if (messageCount % 10_000 == 0) {
+                        long batchEndTime = System.nanoTime();
+                        long batchDurationMs = (batchEndTime - batchStartTime) / 1_000_000;
+                        System.out.printf("Processed 10,000 messages in %d ms\n", batchDurationMs);
+                        batchStartTime = System.nanoTime();
+                    }
                 }
             }
         }

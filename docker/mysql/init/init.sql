@@ -25,62 +25,92 @@ CREATE TABLE salary (
 
 DELIMITER $$
 
--- Populate job_position
 DROP PROCEDURE IF EXISTS populate_job_positions $$
-CREATE PROCEDURE populate_job_positions()
+CREATE PROCEDURE populate_job_positions(IN total INT)
 BEGIN
     DECLARE i INT DEFAULT 1;
-    DECLARE departments JSON;
-    SET departments = JSON_ARRAY('Engineering','HR','Finance','Sales','Marketing','Operations','IT Support','Product','Legal','Admin');
 
-    WHILE i <= 100 DO
+    DECLARE titles JSON;
+    DECLARE depts JSON;
+
+    SET titles = JSON_ARRAY(
+            'Software Engineer','Data Analyst','Frontend Developer','Backend Developer',
+            'DevOps Engineer','Network Specialist','Product Manager','UI/UX Designer',
+            'QA Engineer','Project Manager','Security Analyst','Cloud Architect'
+                 );
+
+    SET depts = JSON_ARRAY(
+            'Engineering','Data','HR','Finance','Sales','Marketing',
+            'Operations','Support','Product','Legal','Admin','Security'
+                );
+
+    WHILE i <= total DO
             INSERT INTO job_position (title, department)
             VALUES (
-                       CONCAT('Position_', i),
-                       JSON_UNQUOTE(JSON_EXTRACT(departments, CONCAT('$[', FLOOR(RAND() * JSON_LENGTH(departments)), ']')))
+                       JSON_UNQUOTE(JSON_EXTRACT(titles, CONCAT('$[', FLOOR(RAND() * JSON_LENGTH(titles)), ']'))),
+                       JSON_UNQUOTE(JSON_EXTRACT(depts, CONCAT('$[', FLOOR(RAND() * JSON_LENGTH(depts)), ']')))
                    );
             SET i = i + 1;
         END WHILE;
 END $$
 
--- Populate employee
 DROP PROCEDURE IF EXISTS populate_employees $$
-CREATE PROCEDURE populate_employees()
+CREATE PROCEDURE populate_employees(IN total INT)
 BEGIN
     DECLARE i INT DEFAULT 1;
-    DECLARE rand_job INT;
+    DECLARE jp_count INT;
+    DECLARE jp_id INT;
 
-    WHILE i <= 100 DO
-            SET rand_job = FLOOR(1 + (RAND() * 100)); -- random job_position_id between 1 and 100
+    DECLARE firstNames JSON;
+    DECLARE lastNames JSON;
+
+    SET firstNames = JSON_ARRAY('Pedro','Lucas','Mariana','Ana','João','Carlos','Beatriz','Sofia','Paulo','Fernando','Julia','Ricardo','Larissa','Gabriel');
+    SET lastNames  = JSON_ARRAY('Silva','Souza','Pereira','Oliveira','Santos','Costa','Almeida','Barros','Cardoso','Rezende','Gomes','Mendes');
+
+    SELECT COUNT(*) INTO jp_count FROM job_position;
+
+    WHILE i <= total DO
+            -- Pick a random job_position id
+            SELECT id INTO jp_id
+            FROM job_position
+            ORDER BY RAND()
+            LIMIT 1;
+
             INSERT INTO employee (name, email, job_position_id, hired_at)
             VALUES (
-                       CONCAT('Employee_', i),
-                       CONCAT('employee', i, '@example.com'),
-                       rand_job,
-                       DATE_SUB(CURDATE(), INTERVAL FLOOR(RAND() * 2000) DAY)
+                       CONCAT(
+                               JSON_UNQUOTE(JSON_EXTRACT(firstNames, CONCAT('$[', FLOOR(RAND() * JSON_LENGTH(firstNames)), ']'))),
+                               ' ',
+                               JSON_UNQUOTE(JSON_EXTRACT(lastNames, CONCAT('$[', FLOOR(RAND() * JSON_LENGTH(lastNames)), ']')))
+                       ),
+                       CONCAT('user', UUID_SHORT(), '@example.com'),
+                       jp_id,
+                       DATE_SUB(CURDATE(), INTERVAL FLOOR(RAND()*2000) DAY)
                    );
+
             SET i = i + 1;
         END WHILE;
 END $$
 
--- Populate salary
 DROP PROCEDURE IF EXISTS populate_salaries $$
-CREATE PROCEDURE populate_salaries()
+CREATE PROCEDURE populate_salaries(IN total INT)
 BEGIN
     DECLARE i INT DEFAULT 1;
-    DECLARE rand_emp INT;
-    DECLARE rand_salary DECIMAL(10,2);
+    DECLARE emp_id INT;
 
-    WHILE i <= 100 DO
-            SET rand_emp = FLOOR(1 + (RAND() * 100)); -- random employee_id
-            SET rand_salary = ROUND(30000 + (RAND() * 70000), 2); -- between 30k–100k
+    WHILE i <= total DO
+            SELECT id INTO emp_id
+            FROM employee
+            ORDER BY RAND()
+            LIMIT 1;
 
             INSERT INTO salary (employee_id, amount, effective_from)
             VALUES (
-                       rand_emp,
-                       rand_salary,
-                       DATE_SUB(CURDATE(), INTERVAL FLOOR(RAND() * 1000) DAY)
+                       emp_id,
+                       ROUND(2500 + RAND() * 15000, 2),
+                       DATE_SUB(CURDATE(), INTERVAL FLOOR(RAND()*1500) DAY)
                    );
+
             SET i = i + 1;
         END WHILE;
 END $$
