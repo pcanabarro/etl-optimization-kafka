@@ -20,6 +20,7 @@
 
     "schema.history.internal.kafka.bootstrap.servers": "kafka:9092",
     "schema.history.internal.kafka.topic": "schema",
+    "tombstones.on.delete": "false",
 
     "transforms": "route,extractKey",
 

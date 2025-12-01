@@ -70,9 +70,9 @@ class ConsumerWorker implements Runnable {
                     long endTime = System.nanoTime();
                     long durationMs = endTime - startTime;
 
-//                    System.out.printf("Transform Time: %d ns\n", transformTime);
-//                    System.out.printf("Processing time: %d ns\n", durationMs);
-//                    System.out.println(" ");
+                    System.out.printf("Transform Time: %d ns\n", transformTime);
+                    System.out.printf("Processing time: %d ns\n", durationMs);
+                    System.out.println(" ");
 
                     long totalProcessed = GLOBAL_COUNTER.incrementAndGet();
                     if (totalProcessed % 10_000 == 0) {
@@ -85,7 +85,6 @@ class ConsumerWorker implements Runnable {
                                 totalProcessed, batchDurationMs, this.consumerName
                         );
                     }
-
                 }
             }
         }
@@ -96,103 +95,96 @@ class ConsumerWorker implements Runnable {
             String messageValue = record.value();
             JSONObject json = new JSONObject(messageValue);
             JSONObject after = json.optJSONObject("after");
-
-            if (after == null) {
-                return null;
-            }
-
+            String op = json.getString("op");
             JSONObject source = json.getJSONObject("source");
             String table = source.getString("table");
-            String op = json.getString("op");
+
+            if (after == null) {
+                if (op.equals("d")) {
+                    JSONObject before = json.optJSONObject("before");
+                    return deleteMessageToPostgres(before, table);
+                }
+            }
 
             validateAndTransformAfter(after, table);
-
-            return switch (op) {
-                case "c" -> insertMessageToPostgres(after, table);
-                case "u" -> updateMessageToPostgres(after, table);
-                case "d" -> deleteMessageToPostgres(after, table);
-                default -> "Unknown operation: " + op;
-            };
+            return insertAndUpdatePostgresSql(after, table, op);
         } catch (Exception e) {
             System.err.println("Transformation error: " + e.getMessage());
             return null;
         }
     }
 
-    private static String insertMessageToPostgres(JSONObject after, String table) {
+    private static String insertAndUpdatePostgresSql(JSONObject after, String table, String operation) {
         switch (table) {
             case "job_position":
                 int id = after.getInt("id");
                 String title = after.getString("title");
                 String department = after.getString("department");
                 String createdAt = after.getString("created_at");
-                return String.format(
-                        "INSERT INTO job_position (id, title, department, created_at) VALUES (%d, '%s', '%s', '%s')",
-                        id, title.replace("'", "''"), department.replace("'", "''"), createdAt
-                );
+
+                return switch (operation) {
+                    case "c" -> String.format(
+                            "INSERT INTO job_position (id, title, department, created_at) VALUES (%d, '%s', '%s', '%s')",
+                            id, title.replace("'", "''"), department.replace("'", "''"), createdAt
+                    );
+                    case "u" -> String.format(
+                            "UPDATE job_position SET title='%s', department='%s', created_at='%s' WHERE id=%d",
+                            title.replace("'", "''"), department.replace("'", "''"), createdAt, id
+                    );
+                    default -> {
+                        System.err.println("Unknown operation for job_position: " + operation);
+                        yield null;
+                    }
+                };
             case "salary":
                 int salaryId = after.getInt("id");
                 int employeeId = after.getInt("employee_id");
                 String amount = after.getString("amount");
                 String effectiveFrom = after.getString("effective_from");
-                return String.format(
-                        "INSERT INTO salary (id, employee_id, amount, effective_from) VALUES (%d, %d, '%s', '%s')",
-                        salaryId, employeeId, amount, effectiveFrom
-                );
+
+                return switch (operation) {
+                    case "c" -> String.format(
+                            "INSERT INTO salary (id, employee_id, amount, effective_from) VALUES (%d, %d, '%s', '%s')",
+                            salaryId, employeeId, amount, effectiveFrom
+                    );
+                    case "u" -> String.format(
+                            "UPDATE salary SET employee_id=%d, amount='%s', effective_from='%s' WHERE id=%d",
+                            employeeId, amount, effectiveFrom, salaryId
+                    );
+                    default -> {
+                        System.err.println("Unknown operation for salary: " + operation);
+                        yield null;
+                    }
+                };
             case "employee":
                 int empId = after.getInt("id");
                 String name = after.getString("name");
                 String email = after.getString("email");
                 int jobPositionId = after.getInt("job_position_id");
                 String hiredAt = after.getString("hired_at");
-                return String.format(
-                        "INSERT INTO employee (id, name, email, job_position_id, hired_at) VALUES (%d, '%s', '%s', %d, '%s')",
-                        empId, name.replace("'", "''"), email.replace("'", "''"), jobPositionId, hiredAt
-                );
+
+                return switch (operation) {
+                    case "c" -> String.format(
+                            "INSERT INTO employee (id, name, email, job_position_id, hired_at) VALUES (%d, '%s', '%s', %d, '%s')",
+                            empId, name.replace("'", "''"), email.replace("'", "''"), jobPositionId, hiredAt
+                    );
+                    case "u" -> String.format(
+                            "UPDATE employee SET name='%s', email='%s', job_position_id=%d, hired_at='%s' WHERE id=%d",
+                            name.replace("'", "''"), email.replace("'", "''"), jobPositionId, hiredAt, empId
+                    );
+                    default -> {
+                        System.err.println("Unknown operation for employee: " + operation);
+                        yield null;
+                    }
+                };
             default:
                 System.err.println("Unknown table: " + table);
                 return null;
         }
     }
 
-    private static String updateMessageToPostgres(JSONObject after, String table) {
-        switch (table) {
-            case "job_position":
-                int id = after.getInt("id");
-                String title = after.getString("title");
-                String department = after.getString("department");
-                String createdAt = after.getString("created_at");
-                return String.format(
-                        "UPDATE job_position SET title='%s', department='%s', created_at='%s' WHERE id=%d",
-                        title.replace("'", "''"), department.replace("'", "''"), createdAt, id
-                );
-            case "salary":
-                int salaryId = after.getInt("id");
-                int employeeId = after.getInt("employee_id");
-                String amount = after.getString("amount");
-                String effectiveFrom = after.getString("effective_from");
-                return String.format(
-                        "UPDATE salary SET employee_id=%d, amount='%s', effective_from='%s' WHERE id=%d",
-                        employeeId, amount, effectiveFrom, salaryId
-                );
-            case "employee":
-                int empId = after.getInt("id");
-                String name = after.getString("name");
-                String email = after.getString("email");
-                int jobPositionId = after.getInt("job_position_id");
-                String hiredAt = after.getString("hired_at");
-                return String.format(
-                        "UPDATE employee SET name='%s', email='%s', job_position_id=%d, hired_at='%s' WHERE id=%d",
-                        name.replace("'", "''"), email.replace("'", "''"), jobPositionId, hiredAt, empId
-                );
-            default:
-                System.err.println("Unknown table for update: " + table);
-                return null;
-        }
-    }
-
-    private static String deleteMessageToPostgres(JSONObject after, String table) {
-        int id = after.getInt("id");
+    private static String deleteMessageToPostgres(JSONObject before, String table) {
+        int id = before.getInt("id");
         return String.format("DELETE FROM %s WHERE id=%d", table, id);
     }
 
