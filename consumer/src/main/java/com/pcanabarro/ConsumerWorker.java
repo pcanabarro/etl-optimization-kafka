@@ -15,11 +15,14 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static com.pcanabarro.database.Database.executePostgresStatement;
 
 class ConsumerWorker implements Runnable {
     private final String consumerName;
+    private static final AtomicLong GLOBAL_COUNTER = new AtomicLong(0);
+    private static final AtomicLong GLOBAL_BATCH_START = new AtomicLong(System.nanoTime());
     private static final Map<String, List<String>> DATE_FIELDS = Map.of(
             "salary", List.of("effective_from"),
             "employee", List.of("hired_at")
@@ -52,9 +55,6 @@ class ConsumerWorker implements Runnable {
             consumer.subscribe(Collections.singletonList(props.getProperty("kafka.topic")));
             System.out.println(consumerName + " esperando mensagens...");
 
-            long batchStartTime = System.nanoTime();
-            int messageCount = 0;
-
             while (true) {
                 ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(500));
                 for (ConsumerRecord<String, String> record : records) {
@@ -64,22 +64,28 @@ class ConsumerWorker implements Runnable {
 
                     String sqlStatement = transformMessageForPostgres(record);
                     long transformTime = System.nanoTime() - startTime;
-//                    System.out.printf("Transform Time: %d ns\n", transformTime);
 
                     executePostgresStatement(sqlStatement);
 
                     long endTime = System.nanoTime();
                     long durationMs = endTime - startTime;
+
+//                    System.out.printf("Transform Time: %d ns\n", transformTime);
 //                    System.out.printf("Processing time: %d ns\n", durationMs);
 //                    System.out.println(" ");
 
-                    messageCount++;
-                    if (messageCount % 10_000 == 0) {
-                        long batchEndTime = System.nanoTime();
-                        long batchDurationMs = (batchEndTime - batchStartTime) / 1_000_000;
-                        System.out.printf("%s - Processed 10,000 messages in %d ms\n", this.consumerName, batchDurationMs);
-                        batchStartTime = System.nanoTime();
+                    long totalProcessed = GLOBAL_COUNTER.incrementAndGet();
+                    if (totalProcessed % 10_000 == 0) {
+                        long now = System.nanoTime();
+                        long start = GLOBAL_BATCH_START.getAndSet(now);
+                        long batchDurationMs = (now - start) / 1_000_000;
+
+                        System.out.printf(
+                                "[GLOBAL] %d messages processed (last 10k took %d ms) — triggered by %s\n",
+                                totalProcessed, batchDurationMs, this.consumerName
+                        );
                     }
+
                 }
             }
         }
