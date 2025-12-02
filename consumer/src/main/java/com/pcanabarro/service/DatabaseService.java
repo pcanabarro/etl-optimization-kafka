@@ -12,8 +12,15 @@ public class DatabaseService {
         this.jdbc = jdbc;
     }
 
-    public void execute(String sql) {
-        if (sql == null) return;
-        jdbc.update(sql);
+    // return true if slow query
+    public boolean execute(String sql) {
+        try {
+            long start = System.nanoTime();
+            jdbc.execute(sql);
+            long ns = System.nanoTime() - start;
+            return ns > 10_000_000; // > 10 ms
+        } catch (Exception e) {
+            throw e;
+        }
     }
 }
