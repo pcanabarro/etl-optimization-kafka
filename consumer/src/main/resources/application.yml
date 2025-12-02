@@ -1,0 +1,29 @@
+server:
+  port: 8080
+  address: 0.0.0.0
+
+spring:
+  kafka:
+    bootstrap-servers: localhost:29092
+    consumer:
+      group-id: etl-group
+      auto-offset-reset: earliest
+    listener:
+      concurrency: 1
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/destination_db
+    username: app_admin
+    password: Root@Passord123
+    driver-class-name: org.postgresql.Driver
+
+etl:
+  kafka:
+    topic: etl-topic
+    group-id: etl-group
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
