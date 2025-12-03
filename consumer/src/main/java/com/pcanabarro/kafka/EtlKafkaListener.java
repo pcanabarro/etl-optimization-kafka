@@ -48,6 +48,7 @@ public class EtlKafkaListener {
         try {
             slowQuery = databaseService.execute(sql); // returns true if slow
         } catch (Exception e) {
+            System.out.println("Error executing SQL: " + sql);
             error = true;
         }
         dbNs = System.nanoTime() - dbStart;

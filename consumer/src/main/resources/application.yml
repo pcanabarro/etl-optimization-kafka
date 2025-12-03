@@ -4,6 +4,7 @@ server:
 
 spring:
   kafka:
+#    bootstrap-servers: nitron.space:39092
     bootstrap-servers: localhost:29092
     consumer:
       group-id: etl-group
@@ -12,8 +13,10 @@ spring:
       concurrency: 1
 
   datasource:
+#    url: jdbc:postgresql://nitron.space:5432/destination_db
     url: jdbc:postgresql://localhost:5432/destination_db
     username: app_admin
+#    password: ServerChacara@Root098!
     password: Root@Passord123
     driver-class-name: org.postgresql.Driver
 

@@ -54,10 +54,10 @@ services:
     ports:
       - "3306:3306"
     environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_ROOT_PASSWORD: ServerChacara@Root098!
       MYSQL_DATABASE: source_db
       MYSQL_USER: user
-      MYSQL_PASSWORD: password
+      MYSQL_PASSWORD: ServerChacara
     volumes:
       - ./mysql/my.cnf:/etc/mysql/my.cnf
       - ./mysql/init:/docker-entrypoint-initdb.d
@@ -95,13 +95,38 @@ services:
     restart: on-failure
     environment:
       POSTGRES_USER: app_admin
-      POSTGRES_PASSWORD: Root@Passord123
+      POSTGRES_PASSWORD: ServerChacara@Root098!
       POSTGRES_DB: destination_db
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./pg/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    profiles: [ "client", "monitoring", "all" ]
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+    depends_on:
+      - postgres
+      - kafka
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    profiles: [ "client", "monitoring", "all" ]
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    depends_on:
+      - prometheus
 
 volumes:
   pgdata:
