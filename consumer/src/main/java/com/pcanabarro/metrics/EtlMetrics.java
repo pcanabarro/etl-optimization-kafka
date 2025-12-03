@@ -3,8 +3,13 @@ package com.pcanabarro.metrics;
 import io.micrometer.core.instrument.*;
 import org.springframework.stereotype.Component;
 
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
 @Component
 public class EtlMetrics {
+
+    private final MeterRegistry reg;
 
     private final Counter processed;
     private final Counter errors;
@@ -20,7 +25,11 @@ public class EtlMetrics {
     private final DistributionSummary kafkaLag;
     private final DistributionSummary kafkaProcessingNs;
 
+    private final Map<Integer, Counter> partitionCounters = new ConcurrentHashMap<>();
+    private final Map<String, Counter> threadCounters = new ConcurrentHashMap<>();
+
     public EtlMetrics(MeterRegistry reg) {
+        this.reg = reg;
 
         processed = reg.counter("etl.processed.total");
         errors = reg.counter("etl.errors.total");
@@ -51,8 +60,31 @@ public class EtlMetrics {
                 .register(reg);
     }
 
+    public void incrementPartitionCount(int partition) {
+        partitionCounters
+                .computeIfAbsent(partition, p ->
+                        Counter.builder("etl.kafka.partition.records")
+                                .tag("partition", String.valueOf(p))
+                                .description("Messages consumed per partition")
+                                .register(reg)
+                )
+                .increment();
+    }
+
+    public void incrementThreadCount(String threadName) {
+        threadCounters
+                .computeIfAbsent(threadName, t ->
+                        Counter.builder("etl.kafka.thread.records")
+                                .tag("thread", t)
+                                .description("Messages processed per consumer thread")
+                                .register(reg)
+                )
+                .increment();
+    }
+
     public void record(long transform, long db, long endToEnd, long kafkaProcessing,
                        boolean error, boolean slowQuery, long msgSize) {
+
         processed.increment();
 
         transformNs.record(transform);

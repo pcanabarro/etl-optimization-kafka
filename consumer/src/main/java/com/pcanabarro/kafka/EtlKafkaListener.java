@@ -40,6 +40,9 @@ public class EtlKafkaListener {
         boolean error = false;
         boolean slowQuery = false;
 
+        metrics.incrementPartitionCount(record.partition());
+        metrics.incrementThreadCount(Thread.currentThread().getName());
+
         long tStart = System.nanoTime();
         String sql = transformService.transform(payload);
         transformNs = System.nanoTime() - tStart;

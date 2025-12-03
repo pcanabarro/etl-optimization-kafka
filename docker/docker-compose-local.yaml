@@ -113,9 +113,6 @@ services:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
-    depends_on:
-      - postgres
-      - kafka
 
   grafana:
     image: grafana/grafana:latest
