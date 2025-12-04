@@ -1,0 +1,8 @@
+### Produce messages on producer app
+POST http://localhost:8081/produce/10000
+
+### Reset flow counter on consumer app
+POST http://localhost:8080/metrics/reset-flow-counter
+
+### Check flow counter on consumer app
+GET http://localhost:8080/metrics/flow-counter

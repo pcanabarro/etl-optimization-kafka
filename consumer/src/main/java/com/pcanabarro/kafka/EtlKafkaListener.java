@@ -1,6 +1,7 @@
 package com.pcanabarro.kafka;
 
 import com.pcanabarro.metrics.EtlMetrics;
+import com.pcanabarro.metrics.GlobalFlowCounter;
 import com.pcanabarro.service.DatabaseService;
 import com.pcanabarro.service.TransformService;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -68,5 +69,20 @@ public class EtlKafkaListener {
                 slowQuery,
                 msgSizeBytes
         );
+
+        long count = GlobalFlowCounter.END_TO_END_MESSAGES.incrementAndGet();
+        if (count % 10_000 == 0) {
+
+            long now = System.nanoTime();
+            long last = GlobalFlowCounter.LAST_BATCH_START_NS.getAndSet(now);
+
+            long elapsedNs = now - last;
+            double elapsedMs = elapsedNs / 1_000_000.0;
+
+            System.out.println(
+                    "⚡ Processed " + count + " messages total | " +
+                            "Last 10k took " + elapsedMs + " ms"
+            );
+        }
     }
 }

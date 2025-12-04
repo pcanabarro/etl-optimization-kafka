@@ -10,7 +10,7 @@ spring:
       group-id: etl-group
       auto-offset-reset: earliest
     listener:
-      concurrency: 1
+      concurrency: 3
 
   datasource:
     url: jdbc:postgresql://nitron.space:5432/destination_db
