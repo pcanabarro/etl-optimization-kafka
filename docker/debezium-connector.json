@@ -4,7 +4,7 @@
     "connector.class": "io.debezium.connector.mysql.MySqlConnector",
     "tasks.max": "1",
 
-    "database.hostname": "nitron.space",
+    "database.hostname": "dev.pcanabarro.com",
     "database.port": "3306",
     "database.user": "root",
     "database.password": "ServerChacara@Root098!",
@@ -18,7 +18,7 @@
     "decimal.handling.mode": "string",
     "time.precision.mode": "connect",
 
-    "schema.history.internal.kafka.bootstrap.servers": "nitron.space:39092",
+    "schema.history.internal.kafka.bootstrap.servers": "dev.pcanabarro.com:39092",
     "schema.history.internal.kafka.topic": "schema",
     "tombstones.on.delete": "false",
 

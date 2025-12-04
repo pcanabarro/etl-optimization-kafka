@@ -1,6 +1,5 @@
 CREATE ROLE app_readonly LOGIN PASSWORD 'readonly_password';
 CREATE ROLE app_writer LOGIN PASSWORD 'writer_password';
--- CREATE ROLE app_admin LOGIN PASSWORD 'Root@Passord123';
 
 -- Grant privileges
 -- Read-only: can only SELECT

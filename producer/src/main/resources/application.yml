@@ -9,7 +9,7 @@ spring:
   application:
     name: producer-app
   datasource:
-    url: jdbc:mysql://nitron.space:3306/source_db
+    url: jdbc:mysql://dev.pcanabarro.com:3306/source_db
     username: root
     password: ServerChacara@Root098!
   jpa:
